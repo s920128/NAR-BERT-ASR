@@ -6,7 +6,8 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import CrossEntropyLoss, MSELoss, MultiheadAttention, Linear, Dropout, LayerNorm, ModuleList
 from transformers import BertTokenizer, BertModel, BertForSequenceClassification, BertPreTrainedModel, AdamW
-from transformers.modeling_bert import *
+#from transformers.modeling_bert import *
+from transformers.models.bert.modeling_bert import *
 from typing import Optional, Any
 
 
