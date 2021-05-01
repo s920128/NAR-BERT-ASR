@@ -35,7 +35,7 @@ class Conv2dSubsampling(torch.nn.Module):
         dropout_rate (float): Dropout rate.
         pos_enc (torch.nn.Module): Custom position encoding layer.
     """
-    def __init__(self, idim, odim = 768, dropout_rate=0.1, pos_enc=None):
+    def __init__(self, idim, odim=768, dropout_rate=0.1, pos_enc=None):
         """Construct an Conv2dSubsampling object."""
         super(Conv2dSubsampling, self).__init__()
         self.conv = torch.nn.Sequential(
@@ -260,10 +260,10 @@ class BERTASR_Encoder(nn.Module):
         encoder_layers = TransformerEncoderLayerPre(d_model=attention_dim, nhead=attention_heads, dropout=dropout_rate)
         self.encoder_norm = nn.LayerNorm(attention_dim)
         self.encoder = nn.TransformerEncoder(encoder_layers, num_layers=6, norm= None)
-        pdslayer = PDSLayer(d_model=attention_dim, nhead=attention_heads, dim_feedforward=2048, dropout=dropout_rate)
+        pdslayer = PDSLayer(d_model=attention_dim, nhead=attention_heads, dropout=dropout_rate)
         self.pds = PDS(pdslayer, num_layers=4)
         self.decoder = nn.TransformerEncoder(encoder_layers, num_layers=6)
-        self.classifier = nn.Linear(768, odim, bias=False)
+        self.classifier = nn.Linear(attention_dim, odim, bias=False)
 
     def forward(self, src, label=None):
         #src: [batch, time, idim]
