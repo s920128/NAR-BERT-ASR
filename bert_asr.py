@@ -12,7 +12,7 @@ from typing import Optional, Any
 
 
 class BasicPositionalEncoding(nn.Module):
-    def __init__(self, d_model=768, dropout=0.1, max_len=5000):
+    def __init__(self, d_model=256, dropout=0.1, max_len=5000):
         super(BasicPositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -36,7 +36,7 @@ class Conv2dSubsampling(torch.nn.Module):
         dropout_rate (float): Dropout rate.
         pos_enc (torch.nn.Module): Custom position encoding layer.
     """
-    def __init__(self, idim, odim=768, dropout_rate=0.1, pos_enc=None):
+    def __init__(self, idim, odim=256, dropout_rate=0.1, pos_enc=None):
         """Construct an Conv2dSubsampling object."""
         super(Conv2dSubsampling, self).__init__()
         self.conv = torch.nn.Sequential(
@@ -70,7 +70,7 @@ class Conv2dSubsampling(torch.nn.Module):
         return x
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=768, dropout=0.1, max_len=60):
+    def __init__(self, d_model=256, dropout=0.1, max_len=60):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
         pe = torch.zeros(max_len, d_model)
@@ -90,7 +90,7 @@ def _get_clones(module, N):
     return ModuleList([copy.deepcopy(module) for i in range(N)])
 
 class PDSLayer(nn.Module):
-    def __init__(self, d_model=768, nhead=8, dim_feedforward=2048, dropout=0.1):
+    def __init__(self, d_model=256, nhead=8, dim_feedforward=2048, dropout=0.1):
         super(PDSLayer, self).__init__()
         self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
@@ -118,11 +118,11 @@ class PDSLayer(nn.Module):
 class PDS(nn.Module):
     def __init__(self, decoder_layer, num_layers=4, norm=None):
         super(PDS, self).__init__()
-        self.position_multihead_attn = MultiheadAttention(768, 8, dropout=0.1)
-        self.norm1 = LayerNorm(768)
-        self.linear1 = Linear(768, 2048)
+        self.position_multihead_attn = MultiheadAttention(256, 8, dropout=0.1)
+        self.norm1 = LayerNorm(256)
+        self.linear1 = Linear(256, 2048)
         self.dropout = Dropout(0.1)
-        self.linear2 = Linear(2048//2, 768)
+        self.linear2 = Linear(2048//2, 256)
         self.activation = F.glu
         self.dropout1 = Dropout(0.1)
         self.dropout2 = Dropout(0.1)
@@ -155,7 +155,7 @@ class PDS(nn.Module):
     
 
 class TransformerEncoderLayerPre(nn.Module):
-    def __init__(self, d_model=768, nhead=8, dim_feedforward=2048, dropout=0.1):
+    def __init__(self, d_model=256, nhead=8, dim_feedforward=2048, dropout=0.1):
         super(TransformerEncoderLayerPre, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
@@ -252,7 +252,7 @@ class BertForMaskedLMForBERTASR(BertForMaskedLM):
         )
     
 class BERTASR_Encoder(nn.Module):
-    def __init__(self, idim, odim, attention_dim=768, attention_heads=8, dropout_rate=0.1):
+    def __init__(self, idim, odim, attention_dim=256, attention_heads=8, dropout_rate=0.1):
         super(BERTASR_Encoder, self).__init__()
         self.model_type = 'Transformer'
         self.odim = odim
@@ -264,7 +264,8 @@ class BERTASR_Encoder(nn.Module):
         pdslayer = PDSLayer(d_model=attention_dim, nhead=attention_heads, dropout=dropout_rate)
         self.pds = PDS(pdslayer, num_layers=4)
         self.decoder = nn.TransformerEncoder(encoder_layers, num_layers=6)
-        self.classifier = nn.Linear(attention_dim, odim, bias=False)
+        self.mlp = nn.Linear(attention_dim, 768)
+        self.classifier = nn.Linear(768, odim, bias=False)
 
     def forward(self, src, label=None):
         #src: [batch, time, idim]
@@ -279,7 +280,7 @@ class BERTASR_Encoder(nn.Module):
         #convert to [batch, time, idim]
         src = src.transpose(0,1)
         #classification
-        output = self.classifier(src)
+        output = self.classifier(self.mlp(src))
         if label !=None:
             loss_fct = LabelSmoothingCrossEntropy()
             loss = loss_fct(output.view(-1, self.odim), label.view(-1))
@@ -304,6 +305,7 @@ class BERTASR(nn.Module):
         src = self.encoder.decoder(src)
         #convert to [batch, time, idim]
         src = src.transpose(0, 1)
+        src = self.encoder.mlp(src)
         # TO BERT Classification
         return self.bertmodel(inputs_embeds=src, labels=label)
 
