@@ -313,7 +313,7 @@ def avg_model(root="./pretraining.", avg_num=10, last_num=130, save_path="./pret
     avg=None
     # sum
     for num in range(0,avg_num):
-        states = torch.load(root+str(last-num), map_location=torch.device("cpu"))
+        states = torch.load(root+str(last_num-num), map_location=torch.device("cpu"))
         if avg is None:
             avg = states
         else:
